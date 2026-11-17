@@ -1,0 +1,44 @@
+# PostgreSQL 16 - 3A Superstore veritabanı
+# Başlatmak için:  docker compose up -d
+# Durdurmak için:  docker compose down        (veri korunur)
+# Sıfırlamak için: docker compose down -v     (veri SİLİNİR, init scriptleri tekrar çalışır)
+services:
+  postgres:
+    image: postgres:16
+    container_name: superstore-postgres
+    restart: unless-stopped
+    # 51 milyon satırlık tablo için varsayılan ayarlar küçük kalıyor; yükleme ve analiz için artırıyoruz
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - work_mem=128MB
+      - -c
+      - maintenance_work_mem=1GB
+      - -c
+      - max_wal_size=8GB
+      - -c
+      - max_parallel_workers_per_gather=4
+      - -c
+      - effective_cache_size=4GB
+    shm_size: 1gb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_READER_USER: ${POSTGRES_READER_USER}
+      POSTGRES_READER_PASSWORD: ${POSTGRES_READER_PASSWORD}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT}:5432"
+    volumes:
+      - superstore_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  superstore_pgdata:
